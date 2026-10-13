@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="uz" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Particle Heart - Pokiza</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@1,600;1,800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#000000',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .ui-layer {
+            position: relative;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.03); }
+        }
+        .title-glow {
+            text-shadow: 0 0 25px rgba(255, 255, 255, 0.7), 0 0 50px rgba(255, 255, 255, 0.4);
+            animation: pulseGlow 5s ease-in-out infinite;
+        }
+        @keyframes textShimmer {
+            0%, 100% {
+                filter: drop-shadow(0 0 15px rgba(255, 182, 193, 0.9)) drop-shadow(0 0 35px rgba(236, 72, 153, 0.7)) drop-shadow(0 0 60px rgba(168, 85, 247, 0.5));
+                transform: scale(1);
+            }
+            50% {
+                filter: drop-shadow(0 0 25px rgba(255, 255, 255, 1)) drop-shadow(0 0 50px rgba(244, 114, 182, 0.9)) drop-shadow(0 0 90px rgba(192, 132, 252, 0.8));
+                transform: scale(1.04);
+            }
+        }
+        .center-name {
+            font-family: 'Great Vibes', cursive;
+            background: linear-gradient(135deg, #ffffff 0%, #ffe4e6 30%, #f472b6 70%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textShimmer 4s ease-in-out infinite;
+        }
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-white h-screen w-screen flex flex-col justify-between select-none">
+
+    <canvas id="heartCanvas"></canvas>
+
+    <div class="ui-layer flex flex-col justify-between h-full w-full p-6 md:p-10">
+        
+        <!-- Header Section -->
+        <header class="flex flex-col items-center pt-2">
+            <h1 class="text-3xl md:text-5xl font-extrabold tracking-widest text-white title-glow uppercase text-center">
+                Neon Particle Heart
+            </h1>
+            <p class="text-xs md:text-sm tracking-widest uppercase mt-2 text-purple-400 font-semibold transition-colors duration-700">
+                By Bakh_Rvn
+            </p>
+        </header>
+
+        <!-- Center Interactive Area / Name Overlay -->
+        <div class="flex flex-col justify-center items-center pointer-events-none my-auto">
+            <div class="center-name text-6xl md:text-8xl lg:text-9xl font-bold tracking-wider py-4 px-6 text-center select-none">
+                Pokiza
+            </div>
+            <div class="glass-panel px-6 py-2.5 rounded-full text-xs md:text-sm text-gray-300 tracking-wider shadow-2xl opacity-80 animate-pulse text-center mt-4">
+                ✨ Uchqunlar o'z-o'zidan turli ranglarga o'zgaradi &bull; Sichqoncha bilan teging ✨
+            </div>
+        </div>
+
+        <!-- Footer Control Panel & Action Buttons -->
+        <footer class="flex flex-col sm:flex-row items-center justify-between gap-4 glass-panel p-4 md:px-8 rounded-2xl interactive max-w-md mx-auto w-full shadow-2xl">
+            <!-- Scatter & Restore Buttons -->
+            <div class="flex items-center justify-center gap-3 w-full">
+                <button onclick="scatterParticles()" class="flex-1 px-5 py-3 rounded-xl text-xs md:text-sm font-bold uppercase tracking-wider transition-all duration-300 bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg shadow-red-900/40 hover:scale-105 active:scale-95 border border-red-500/30">
+                    💥 Yurak sochish
+                </button>
+                <button onclick="restoreParticles()" class="flex-1 px-5 py-3 rounded-xl text-xs md:text-sm font-bold uppercase tracking-wider transition-all duration-300 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 hover:scale-105 active:scale-95 border border-emerald-500/30">
+                    ❤️ Qayta tiklash
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        const mouse = {
+            x: -1000,
+            y: -1000,
+            vx: 0,
+            vy: 0,
+            lastX: -1000,
+            lastY: -1000,
+            radius: 95,
+            active: false
+        };
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.lastX = mouse.x;
+            mouse.lastY = mouse.y;
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            mouse.vx = mouse.x - mouse.lastX;
+            mouse.vy = mouse.y - mouse.lastY;
+            mouse.active = true;
+        });
+
+        window.addEventListener('mouseout', () => {
+            mouse.active = false;
+            mouse.x = -1000;
+            mouse.y = -1000;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                mouse.lastX = mouse.x;
+                mouse.lastY = mouse.y;
+                mouse.x = e.touches[0].clientX;
+                mouse.y = e.touches[0].clientY;
+                mouse.vx = mouse.x - mouse.lastX;
+                mouse.vy = mouse.y - mouse.lastY;
+                mouse.active = true;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            mouse.active = false;
+            mouse.x = -1000;
+            mouse.y = -1000;
+        });
+
+        // Mathematical heart shape parametric formula
+        function getHeartPoint(t, scale) {
+            const x = 16 * Math.pow(Math.sin(t), 3);
+            const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+            return {
+                x: width / 2 + x * scale,
+                y: height / 2 + y * scale - 10
+            };
+        }
+
+        class Particle {
+            constructor(targetX, targetY, isOutline = false) {
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                // Microscopic stardust sizing for soft cosmic nebula effect
+                this.baseSize = isOutline ? Math.random() * 0.95 + 0.45 : Math.random() * 0.75 + 0.2;
+                this.size = this.baseSize;
+                this.isOutline = isOutline;
+                this.angle = Math.random() * Math.PI * 2;
+                this.friction = 0.91;
+                this.springFactor = 0.038;
+                this.colorCycleOffset = Math.random() * Math.PI * 2;
+                this.scattered = false;
+            }
+
+            update(globalTime) {
+                if (this.scattered) {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vx *= 0.98;
+                    this.vy *= 0.98;
+
+                    if (this.x < 0 || this.x > width) this.vx *= -1;
+                    if (this.y < 0 || this.y > height) this.vy *= -1;
+                } else {
+                    let dx = this.targetX - this.x;
+                    let dy = this.targetY - this.y;
+
+                    dx += Math.cos(globalTime * 0.025 + this.angle) * 2.2;
+                    dy += Math.sin(globalTime * 0.025 + this.angle) * 2.2;
+
+                    this.vx = (this.vx + dx * this.springFactor) * this.friction;
+                    this.vy = (this.vy + dy * this.springFactor) * this.friction;
+
+                    this.x += this.vx;
+                    this.y += this.vy;
+                }
+
+                if (mouse.active) {
+                    let mdx = this.x - mouse.x;
+                    let mdy = this.y - mouse.y;
+                    let distSq = mdx * mdx + mdy * mdy;
+                    let radiusSq = mouse.radius * mouse.radius;
+
+                    if (distSq < radiusSq && distSq > 0) {
+                        let dist = Math.sqrt(distSq);
+                        let force = (mouse.radius - dist) / mouse.radius;
+                        let pushAngle = Math.atan2(mdy, mdx);
+                        let pushStrength = force * 7.0;
+
+                        this.vx += Math.cos(pushAngle) * pushStrength + mouse.vx * 0.08;
+                        this.vy += Math.sin(pushAngle) * pushStrength + mouse.vy * 0.08;
+                    }
+                }
+            }
+
+            draw(ctx, colorScheme) {
+                let r, g, b;
+                // Automatically cycling through glowing color spectrum
+                let t = colorScheme * 0.7 + this.colorCycleOffset;
+                let phase = (Math.sin(t * 0.4) + 1) * 2; // Range 0 to 4
+                let idx = Math.floor(phase);
+                let p = phase - idx;
+
+                const colors = [
+                    { r: 255, g: 80, b: 40 },   // Fiery Orange/Red
+                    { r: 219, g: 39, b: 119 },  // Radiant Rose Pink
+                    { r: 168, g: 85, b: 247 },  // Soft Violet / Purple
+                    { r: 34, g: 197, b: 94 },   // Vibrant Emerald Green
+                    { r: 255, g: 215, b: 0 }    // Gold / Stardust Highlight
+                ];
+
+                let c1 = colors[idx % colors.length];
+                let c2 = colors[(idx + 1) % colors.length];
+
+                r = Math.floor(c1.r * (1 - p) + c2.r * p);
+                g = Math.floor(c1.g * (1 - p) + c2.g * p);
+                b = Math.floor(c1.b * (1 - p) + c2.b * p);
+
+                // Highlight sparks for outline particles
+                if (this.isOutline && Math.sin(t * 3 + this.angle) > 0.70) {
+                    r = 255; g = 255; b = 255;
+                }
+
+                ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        let particles = [];
+        const particleCount = 110000; // 110,000 particles fully filling outline AND interior
+        let scale = Math.min(width, height) / 36;
+
+        function initParticles() {
+            particles = [];
+            const angleStep = (Math.PI * 2) / particleCount;
+
+            for (let i = 0; i < particleCount; i++) {
+                let t = Math.random() * Math.PI * 2;
+                let pt = getHeartPoint(t, scale);
+                
+                // Uniformly fill the entire interior of the heart
+                let spread = Math.sqrt(Math.random()); 
+                let isOutline = spread > 0.92;
+                
+                let targetX = width / 2 + (pt.x - width / 2) * (isOutline ? 1 : spread);
+                let targetY = height / 2 + (pt.y - height / 2) * (isOutline ? 1 : spread);
+
+                particles.push(new Particle(targetX, targetY, isOutline));
+            }
+        }
+
+        initParticles();
+
+        let backgroundStars = [];
+        for (let i = 0; i < 350; i++) {
+            backgroundStars.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                size: Math.random() * 1.0,
+                alpha: Math.random(),
+                speed: Math.random() * 0.012 + 0.002
+            });
+        }
+
+        function scatterParticles() {
+            particles.forEach(p => {
+                p.scattered = true;
+                let angle = Math.random() * Math.PI * 2;
+                let speed = Math.random() * 30 + 6;
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
+            });
+        }
+
+        function restoreParticles() {
+            scale = Math.min(width, height) / 36;
+
+            particles.forEach((p) => {
+                p.scattered = false;
+                let t = Math.random() * Math.PI * 2;
+                let pt = getHeartPoint(t, scale);
+                let spread = p.isOutline ? 1 : Math.sqrt(Math.random());
+                p.targetX = width / 2 + (pt.x - width / 2) * spread;
+                p.targetY = height / 2 + (pt.y - height / 2) * spread;
+                p.vx = (Math.random() - 0.5) * 4;
+                p.vy = (Math.random() - 0.5) * 4;
+            });
+        }
+
+        let frameCount = 0;
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Render background stardust
+            backgroundStars.forEach(star => {
+                star.alpha += star.speed;
+                if (star.alpha > 1 || star.alpha < 0) star.speed *= -1;
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(star.alpha)})`;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            });
+
+            // Ambient background glow sync
+            let colorShiftTime = frameCount * 0.007;
+            let rGlow = Math.floor(Math.sin(colorShiftTime) * 50 + 120);
+            let gGlow = Math.floor(Math.sin(colorShiftTime + 2) * 50 + 80);
+            let bGlow = Math.floor(Math.sin(colorShiftTime + 4) * 60 + 160);
+
+            let gradient = ctx.createRadialGradient(width / 2, height / 2, 20, width / 2, height / 2, Math.max(width, height) * 0.65);
+            gradient.addColorStop(0, `rgba(${rGlow}, ${gGlow}, ${bGlow}, 0.16)`);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            scale = Math.min(width, height) / 36;
+
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                p.update(frameCount);
+                p.draw(ctx, colorShiftTime);
+            }
+
+            frameCount++;
+            requestAnimationFrame(animate);
+        }
+
+        window.onload = function() {
+            animate();
+        };
+    </script>
+</body>
+</html>
